@@ -1,14 +1,15 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
 
 import "./interfaces/ISwap.sol";
 import "./interfaces/IFactory.sol";
+
 import "./utils/Context.sol";
 import "./utils/Ownable.sol";
 import "./utils/SafeMath.sol";
 import "./utils/Address.sol";
-import "./LBR.sol";
-import "./staking/Staking.sol";
+
+import "./Token.sol";
+import "./Staking.sol";
 
 contract Deployer is Context, Ownable {
     /* LIBS */
@@ -50,9 +51,9 @@ contract Deployer is Context, Ownable {
     mapping(address => uint256) private balances;
     mapping(address => uint256) private rewards;
     
-    /* QUICKSWAP */
-    address internal FACTORY_ADDRESS = 0x0 ;
-    address internal ROUTER_ADDRESS = 0x0 ;
+    /* DEX */
+    address internal FACTORY_ADDRESS = 0x049581aEB6Fe262727f290165C29BDAB065a1B68 ;
+    address internal ROUTER_ADDRESS = 0xAA30eF758139ae4a7f798112902Bf6d65612045f ;
     IFactory internal factory;
     ISwap internal router;
     
@@ -78,7 +79,7 @@ contract Deployer is Context, Ownable {
             REWARD_PER_BLOCK = FARM_TOKENS / (60 * 60 * 24 * 365 / 2);
             
             /* CREATING GENESIS LIQIDITY */ 
-            uint256 tokenAmount = _rewardFromRiver(_msgSender(), msg.value);
+            uint256 tokenAmount = _rewardFromRiver(msg.value);
             router.addLiquidityETH{ value: msg.value }( 
                 address(beamToken), //token
                 tokenAmount, // amountTokenDesired
@@ -121,11 +122,11 @@ contract Deployer is Context, Ownable {
         VALID_TILL = timestamp;
     }
     
-    function _rewardFromRiver(address user, uint256 _value) internal view returns (uint256 reward) {
+    function _rewardFromRiver(uint256 _value) internal view returns (uint256 reward) {
         return _value.mul(PRESALE_RATIO).div(10**18).mul(10**_tokenDecimals); 
     }
     
-    function _riverFromReward(address user, uint256 _value) internal view returns (uint256 _wei) {
+    function _riverFromReward(uint256 _value) internal view returns (uint256 _wei) {
         return _value.div(PRESALE_RATIO).mul(10**18).div(10**_tokenDecimals); 
     }
 
@@ -276,7 +277,7 @@ contract Deployer is Context, Ownable {
         }
         
         uint256 _totalUserToken = _reward;
-        uint256 _river = _riverFromReward(sender, _totalUserToken);
+        uint256 _river = _riverFromReward(_totalUserToken);
         uint256 _totalUserRiver = _balance.add(_river);
         
         totalRiver = totalRiver.sub(_totalUserRiver);
@@ -287,7 +288,7 @@ contract Deployer is Context, Ownable {
     }
      
     receive () external payable {
-        require(msg.value > 0, 'receive:: Cannot deposit zero MATIC');
+        require(msg.value > 0, 'receive:: Cannot deposit zero MOVR');
         address sender = _msgSender();
         if(!sender.isContract()) {
             uint256 _time = block.timestamp;
@@ -300,7 +301,7 @@ contract Deployer is Context, Ownable {
             uint256 instantValue;
             uint256 delayedValue;
             
-            uint256 _reward = _rewardFromRiver(sender, msg.value);
+            uint256 _reward = _rewardFromRiver(msg.value);
             uint256 _preTotalRewards = totalRewards.add( _reward );
     
             if( _preTotalRewards <= TOKENS_TO_LIQIDITY ) {
@@ -312,7 +313,7 @@ contract Deployer is Context, Ownable {
                     instantValue = msg.value.sub(delayedValue);
                 }
                 
-                uint256 reward = _rewardFromRiver(sender, instantValue);
+                uint256 reward = _rewardFromRiver(instantValue);
                 rewards[sender] = rewards[sender].add( reward );
                 addLiquidity(sender, reward, instantValue);
     
@@ -325,10 +326,10 @@ contract Deployer is Context, Ownable {
                 uint256 instantTokenValue = _reward.sub( overflow );
                 if ( instantTokenValue > 0 ){
                     rewards[sender] = rewards[sender].add( instantTokenValue );
-                    instantValue = _riverFromReward(sender, instantTokenValue);
+                    instantValue = _riverFromReward(instantTokenValue);
                     addLiquidity(sender, instantTokenValue, instantValue);
                 }
-                uint256 _river =  _riverFromReward(sender, overflow);
+                uint256 _river =  _riverFromReward(overflow);
                 totalRiver = totalRiver.add( _river ).add(instantValue);
                 balances[sender] = balances[sender].add( _river );
             }
