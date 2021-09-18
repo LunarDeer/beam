@@ -43,6 +43,7 @@ contract Deployer is Context, Ownable {
     
     uint256 public START_TIME;
     uint256 public VALID_TILL;
+    uint256 public stakingBlocksOffset = 1108;
     
     /* SERVICE */
     address[] public participants;
@@ -76,7 +77,7 @@ contract Deployer is Context, Ownable {
             VALID_TILL = _startTime + (_presaleDays * 1 days);
             beamToken.approve(address(this), ~uint256(0));
             require(beamToken.approve(ROUTER_ADDRESS, ~uint256(0)), "Approve failed");
-            REWARD_PER_BLOCK = FARM_TOKENS / (60 * 60 * 24 * 365 / 2);
+            REWARD_PER_BLOCK = FARM_TOKENS / 425352;
             
             /* CREATING GENESIS LIQIDITY */ 
             uint256 tokenAmount = _rewardFromRiver(msg.value);
@@ -94,6 +95,18 @@ contract Deployer is Context, Ownable {
             lpToken = IERC20( LP_TOKEN_ADDRESS );
             require( lpToken.approve( ROUTER_ADDRESS, ~uint256(0)) );
             beamToken.setLPPair( LP_TOKEN_ADDRESS );
+            
+            LPStaking = new Staking(
+                beamToken,
+                REWARD_PER_BLOCK,
+                (VALID_TILL - START_TIME/13) + stakingBlocksOffset // start 4 hours after pre-sale
+            ); 
+            
+            NativeStaking = new Staking(
+                beamToken,
+                REWARD_PER_BLOCK,
+                (VALID_TILL - START_TIME/13) + stakingBlocksOffset
+            );
             
             beamToken.excludeAccount( address(this) );
     }   
@@ -214,25 +227,17 @@ contract Deployer is Context, Ownable {
         }
         
         /* INIT STAKINGS */
-        uint256 _stakingStart = block.timestamp + (60 * 60 * 4)/2;
-        
-        LPStaking = new Staking(
-            beamToken,
-            REWARD_PER_BLOCK,
-            _stakingStart
-            );
+        uint256 _stakingStart = block.number + stakingBlocksOffset;
+
         beamToken.transferNoFee( address(this), address(LPStaking), LP_STAKING_TOKENS );
         LPStaking.fund(LP_STAKING_TOKENS);
         LPStaking.add( beamToken.balanceOf(address(LPStaking)), lpToken, false);
-        
-        NativeStaking = new Staking(
-            beamToken,
-            REWARD_PER_BLOCK,
-            _stakingStart
-            );
+        LPStaking.setStartBlock(_stakingStart);
+
         beamToken.transferNoFee( address(this), address(NativeStaking), NATIVE_STAKING_TOKENS );
         NativeStaking.fund(NATIVE_STAKING_TOKENS);
         NativeStaking.add( beamToken.balanceOf(address(NativeStaking)), beamToken, false);
+        NativeStaking.setStartBlock(_stakingStart);
         
         
         beamToken.approve( address(NativeStaking), ~uint256(0) );                

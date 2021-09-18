@@ -67,6 +67,10 @@ contract Staking is Ownable {
         endBlock = _startBlock;
     }
 
+    function setStartBlock(uint256 _startBlock) external onlyOwner {
+        startBlock = _startBlock;
+    }
+
     // Number of LP pools
     function poolLength() external view returns (uint256) {
         return poolInfo.length;
