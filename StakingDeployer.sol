@@ -26,7 +26,12 @@ contract StakingDeployer{
         LPStaking.add( deployer.LP_STAKING_TOKENS(), deployer.lpToken(), false);
         NativeStaking.add( deployer.NATIVE_STAKING_TOKENS(), deployer.beamToken(), false);
         
+        LPStaking.transferOwnership(_deployer);
+        NativeStaking.transferOwnership(_deployer);
+        
         deployer.setLPStaking(LPStaking); 
         deployer.setNativeStaking(NativeStaking);
+        
+        
     }
 }
