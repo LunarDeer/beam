@@ -14,13 +14,13 @@ contract StakingDeployer{
         Staking LPStaking = new Staking(
             deployer.lpToken(),
             deployer.REWARD_PER_BLOCK(),
-            ( (deployer.VALID_TILL() - deployer.START_TIME()) / 13 ) + deployer.stakingBlocksOffset() // start 4 hours after pre-sale
+            block.number + ( (deployer.VALID_TILL() - deployer.START_TIME()) / 13 ) + deployer.stakingBlocksOffset() // start 4 hours after pre-sale
         );
         
         Staking NativeStaking = new Staking(
             deployer.beamToken(),
             deployer.REWARD_PER_BLOCK(),
-            ( (deployer.VALID_TILL() - deployer.START_TIME()) / 13 ) + deployer.stakingBlocksOffset()
+            block.number + ( (deployer.VALID_TILL() - deployer.START_TIME()) / 13 ) + deployer.stakingBlocksOffset()
         );
         
         LPStaking.add( deployer.LP_STAKING_TOKENS(), deployer.lpToken(), false);
