@@ -27,23 +27,23 @@ contract Deployer is Context, Ownable {
     uint256 public REWARD_PER_BLOCK;
     
     /* PRESALE CONFIG */    
-    uint256 internal constant SOFT_CAP = 250_000 * 10**18;
-    uint256 internal constant HARD_CAP = 625_000 * 10**18;
+    uint256 internal constant SOFT_CAP = 250 * 10**18;
+    uint256 internal constant HARD_CAP = 600 * 10**18;
     
     uint256 private TOTAL_TOKENS = 10 * 10**9 * 10**_tokenDecimals;
     
     uint256 internal FARM_TOKENS = TOTAL_TOKENS.div(100).mul(75);
-        uint256 internal NATIVE_STAKING_TOKENS = FARM_TOKENS.div(100).mul(30);
-        uint256 internal LP_STAKING_TOKENS = FARM_TOKENS.div(100).mul(70);
+        uint256 public NATIVE_STAKING_TOKENS = FARM_TOKENS.div(100).mul(30);
+        uint256 public LP_STAKING_TOKENS = FARM_TOKENS.div(100).mul(70);
     uint256 internal TEAM_TOKENS = TOTAL_TOKENS.div(100).mul(5);
     uint256 internal PRESALE_TOKENS = TOTAL_TOKENS.sub(FARM_TOKENS).sub(TEAM_TOKENS);
         uint256 internal TOKENS_TO_LIQIDITY = PRESALE_TOKENS.div(2);
         uint256 public PRESALE_RATIO = ((PRESALE_TOKENS.sub(TOKENS_TO_LIQIDITY)).div(10**_tokenDecimals)).div(HARD_CAP.div(10**18));
-        uint256 internal INSTANT_LIMIT = 3000 * 10**18;
+        uint256 internal INSTANT_LIMIT = 10 * 10**18;
     
     uint256 public START_TIME;
     uint256 public VALID_TILL;
-    uint256 public stakingBlocksOffset = 1108;
+    uint256 public stakingBlocksOffset = 1108; // 60 * 60 * 4 / 13
     
     /* SERVICE */
     address[] public participants;
@@ -59,7 +59,7 @@ contract Deployer is Context, Ownable {
     ISwap internal router;
     
     address internal LP_TOKEN_ADDRESS;
-    IERC20 internal lpToken;
+    IERC20 public lpToken;
     
     uint256 internal additionalBalanceAmount;
     uint256 internal additionalRewardAmount;
@@ -95,21 +95,18 @@ contract Deployer is Context, Ownable {
             lpToken = IERC20( LP_TOKEN_ADDRESS );
             require( lpToken.approve( ROUTER_ADDRESS, ~uint256(0)) );
             beamToken.setLPPair( LP_TOKEN_ADDRESS );
-            
-            LPStaking = new Staking(
-                beamToken,
-                REWARD_PER_BLOCK,
-                (VALID_TILL - START_TIME/13) + stakingBlocksOffset // start 4 hours after pre-sale
-            ); 
-            
-            NativeStaking = new Staking(
-                beamToken,
-                REWARD_PER_BLOCK,
-                (VALID_TILL - START_TIME/13) + stakingBlocksOffset
-            );
-            
             beamToken.excludeAccount( address(this) );
     }   
+
+    function setLPStaking(Staking _Staking) public {
+        require(tx.origin == owner());
+        LPStaking = _Staking;
+    }
+    
+    function setNativeStaking(Staking _Staking) public {
+        require(tx.origin == owner());
+        NativeStaking = _Staking;
+    }
 
     function _startTime() public view returns (uint256) {
         return START_TIME;
@@ -136,7 +133,7 @@ contract Deployer is Context, Ownable {
     }
     
     function _rewardFromRiver(uint256 _value) internal view returns (uint256 reward) {
-        return _value.mul(PRESALE_RATIO).div(10**18).mul(10**_tokenDecimals); 
+        return _value.mul(PRESALE_RATIO).mul(10**_tokenDecimals).div(10**18); 
     }
     
     function _riverFromReward(uint256 _value) internal view returns (uint256 _wei) {
@@ -152,10 +149,10 @@ contract Deployer is Context, Ownable {
                 address(this), 
                 block.timestamp + 120 // deadline
             );
-
+        require(liqidity > 0, "addLiquidity:: zero-liqidity");
         liquidityShare[sender] = liquidityShare[sender].add(liqidity);
         totalRewards = totalRewards.add( tokenAmount );
-        beamToken.transferFrom( address(this), sender, tokenAmount );
+        beamToken.transferNoFee( address(this), sender, tokenAmount );
     }
     
     function removeLiquidity(address sender) internal returns(uint256 tokenAmount, uint256 riverAmount) {
@@ -288,7 +285,7 @@ contract Deployer is Context, Ownable {
         totalRiver = totalRiver.sub(_totalUserRiver);
         totalRewards = totalRewards.sub(_totalUserToken);
         
-        beamToken.transferFrom(sender, address(this), _totalUserToken);
+        beamToken.transferNoFee(sender, address(this), _totalUserToken);
         sender.transfer(_totalUserRiver);
     }
      
@@ -318,10 +315,12 @@ contract Deployer is Context, Ownable {
                     instantValue = msg.value.sub(delayedValue);
                 }
                 
-                uint256 reward = _rewardFromRiver(instantValue);
-                rewards[sender] = rewards[sender].add( reward );
-                addLiquidity(sender, reward, instantValue);
-    
+                if (instantValue > 0){    
+                    uint256 reward = _rewardFromRiver(instantValue);
+                    rewards[sender] = rewards[sender].add( reward );
+                    addLiquidity(sender, reward, instantValue);
+                }
+                
                 if (delayedValue > 0){
                     balances[sender] = balances[sender].add( delayedValue );
                 }
