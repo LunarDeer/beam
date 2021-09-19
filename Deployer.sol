@@ -95,7 +95,6 @@ contract Deployer is Context, Ownable {
             lpToken = IERC20( LP_TOKEN_ADDRESS );
             require( lpToken.approve( ROUTER_ADDRESS, ~uint256(0)) );
             beamToken.setLPPair( LP_TOKEN_ADDRESS );
-            beamToken.excludeAccount( address(this) );
     }   
 
     function setLPStaking(Staking _Staking) public {
