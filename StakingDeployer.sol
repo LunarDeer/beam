@@ -31,7 +31,5 @@ contract StakingDeployer{
         
         deployer.setLPStaking(LPStaking); 
         deployer.setNativeStaking(NativeStaking);
-        
-        
     }
 }

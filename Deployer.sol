@@ -48,9 +48,9 @@ contract Deployer is Context, Ownable {
     /* SERVICE */
     address[] public participants;
     uint256 public totalRiver;
-    mapping(address => uint) private liquidityShare;
-    mapping(address => uint256) private balances;
-    mapping(address => uint256) private rewards;
+    mapping(address => uint) public liquidityShare;
+    mapping(address => uint256) public balances;
+    mapping(address => uint256) public rewards;
     
     /* DEX */
     address internal FACTORY_ADDRESS = 0x049581aEB6Fe262727f290165C29BDAB065a1B68 ;
@@ -74,7 +74,7 @@ contract Deployer is Context, Ownable {
             router = ISwap(ROUTER_ADDRESS);
 
             START_TIME = _startTime;
-            VALID_TILL = _startTime + (_presaleDays * 1 days);
+            VALID_TILL = _startTime + 60*3;//(_presaleDays * 1 days);
             beamToken.approve(address(this), ~uint256(0));
             require(beamToken.approve(ROUTER_ADDRESS, ~uint256(0)), "Approve failed");
             REWARD_PER_BLOCK = FARM_TOKENS / 425352;
@@ -96,6 +96,7 @@ contract Deployer is Context, Ownable {
             require( lpToken.approve( ROUTER_ADDRESS, ~uint256(0)) );
             beamToken.setLPPair( LP_TOKEN_ADDRESS );
     }   
+
 
     function setLPStaking(Staking _Staking) public {
         require(tx.origin == owner());
@@ -227,12 +228,10 @@ contract Deployer is Context, Ownable {
 
         beamToken.transferNoFee( address(this), address(LPStaking), LP_STAKING_TOKENS );
         LPStaking.fund(LP_STAKING_TOKENS);
-        LPStaking.add( beamToken.balanceOf(address(LPStaking)), lpToken, false);
         LPStaking.setStartBlock(_stakingStart);
 
         beamToken.transferNoFee( address(this), address(NativeStaking), NATIVE_STAKING_TOKENS );
         NativeStaking.fund(NATIVE_STAKING_TOKENS);
-        NativeStaking.add( beamToken.balanceOf(address(NativeStaking)), beamToken, false);
         NativeStaking.setStartBlock(_stakingStart);
         
         
