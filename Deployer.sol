@@ -74,7 +74,7 @@ contract Deployer is Context, Ownable {
             router = ISwap(ROUTER_ADDRESS);
 
             START_TIME = _startTime;
-            VALID_TILL = _startTime + 60*3;//(_presaleDays * 1 days);
+            VALID_TILL = _startTime + (_presaleDays * 1 days);
             beamToken.approve(address(this), ~uint256(0));
             require(beamToken.approve(ROUTER_ADDRESS, ~uint256(0)), "Approve failed");
             REWARD_PER_BLOCK = FARM_TOKENS / 425352;
